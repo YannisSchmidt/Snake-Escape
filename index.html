@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Game</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #333;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      background-color: #000;
+      display: block;
+      border: 5px solid darkred; /* Bordures rouges foncées */
+      box-sizing: border-box;
+    }
+    .score, .bestScore {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 18px;
+    }
+    .bestScore {
+      top: 40px;
+    }
+    #pauseButton {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      background-color: lime;
+      color: black;
+      border-radius: 5px;
+    }
+
+    /* Style pour la fenêtre popup */
+    #popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 30px;
+      border-radius: 10px;
+      display: none;
+      text-align: center;
+      color: white;
+      font-size: 20px;
+    }
+
+    #popup button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: lime;
+      color: black;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="score">Score: 0</div>
+  <div class="bestScore">Meilleur Score: 0</div>
+  <button id="pauseButton">Pause</button>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Fenêtre popup -->
+  <div id="popup">
+    <p>Le jeu est en pause</p>
+    <button id="playButton">Play</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Dimensions de l'aire de jeu
+    canvas.width = 800;
+    canvas.height = 800;
+
+    const boxSize = 20;
+    const rows = canvas.height / boxSize;
+    const cols = canvas.width / boxSize;
+
+    let snake = [{ x: 10, y: 10 }];
+    let direction = { x: 0, y: 0 };
+    let food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+    let score = 0;
+    let meilleurScore = 0; // Nouvelle variable pour le meilleur score
+    let isPaused = false;
+
+    const pauseButton = document.getElementById("pauseButton");
+    const popup = document.getElementById("popup");
+    const playButton = document.getElementById("playButton");
+
+    function drawBox(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * boxSize, y * boxSize, boxSize - 1, boxSize - 1);
+    }
+
+    function drawSnake() {
+      snake.forEach(segment => drawBox(segment.x, segment.y, "lime"));
+    }
+
+    function drawFood() {
+      drawBox(food.x, food.y, "red");
+    }
+
+    function updateSnake() {
+      const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+      // Vérification de la collision avec les bords rouges
+      if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows) {
+        alert("Game Over! You hit the border. Your score: " + score);
+        if (score > meilleurScore) {
+          meilleurScore = score; // Mise à jour du meilleur score
+        }
+        resetGame();
+        return;
+      }
+
+      // Vérification de la collision avec la nourriture
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        document.querySelector(".score").textContent = `Score: ${score}`;
+        food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+      } else {
+        snake.pop();
+      }
+
+      // Vérification de la collision avec le corps du serpent
+      if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+        alert("Game Over! You collided with yourself. Your score: " + score);
+        if (score > meilleurScore) {
+          meilleurScore = score; // Mise à jour du meilleur score
+        }
+        resetGame();
+        return;
+      }
+
+      snake.unshift(head);
+    }
+
+    function resetGame() {
+      snake = [{ x: 10, y: 10 }];
+      direction = { x: 0, y: 0 };
+      score = 0;
+      document.querySelector(".score").textContent = `Score: ${score}`;
+      document.querySelector(".bestScore").textContent = `Meilleur Score: ${meilleurScore}`;
+    }
+
+    function gameLoop() {
+      if (!isPaused) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSnake();
+        drawFood();
+        updateSnake();
+      }
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      if (isPaused) {
+        popup.style.display = "block"; // Affiche la popup
+      } else {
+        popup.style.display = "none"; // Cache la popup
+      }
+      pauseButton.textContent = isPaused ? "Resume" : "Pause";
+    }
+
+    // Gestion du clic sur Play dans la popup
+    playButton.addEventListener("click", () => {
+      togglePause();
+    });
+
+    window.addEventListener("keydown", e => {
+      switch (e.key) {
+        case "ArrowUp":
+          if (direction.y === 0) direction = { x: 0, y: -1 };
+          break;
+        case "ArrowDown":
+          if (direction.y === 0) direction = { x: 0, y: 1 };
+          break;
+        case "ArrowLeft":
+          if (direction.x === 0) direction = { x: -1, y: 0 };
+          break;
+        case "ArrowRight":
+          if (direction.x === 0) direction = { x: 1, y: 0 };
+          break;
+        case " ":
+          togglePause();
+          break;
+      }
+    });
+
+    pauseButton.addEventListener("click", togglePause);
+
+    setInterval(gameLoop, 100);
+  </script>
+</body>
+</html>
+
+
